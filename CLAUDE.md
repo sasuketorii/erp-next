@@ -134,6 +134,7 @@ bench --site mysite.localhost run-tests --module whitelabel.tests.test_branding
 - [開発環境ガイド](frappe.io Docs/開発環境ガイド.md)
 - [カスタムアプリインストール](frappe.io Docs/カスタムアプリインストール方法.md)
 - [ホワイトラベル化ガイド](frappe.io Docs/推奨されるホワイトラベル化・カスタム方法・拡張方法.md)
+- [Frappe/ERPNext 開発ガイド](docs/development/frappe-erpnext-development-guide.md) ⭐️ 公式リソース集
 
 ### 要件・仕様
 - [マルチテナント要件定義](要件定義/マルチテナント型ERP SaaS 要件定義書 (Xserver VPS版).md)
@@ -190,10 +191,19 @@ bench --site mysite.localhost run-tests --module whitelabel.tests.test_branding
 
 ### 新機能開発
 1. `feature/機能名`ブランチを作成
-2. DocTypeまたはカスタムアプリを開発
-3. テストを作成・実行
-4. Dockerイメージをビルド・テスト
-5. プルリクエストを作成
+2. [Frappe/ERPNext 開発ガイド](docs/development/frappe-erpnext-development-guide.md)を参照
+3. DocTypeまたはカスタムアプリを開発
+4. テストを作成・実行
+5. Dockerイメージをビルド・テスト
+6. プルリクエストを作成
+
+### 開発初心者向け学習順序
+1. **Frappe Framework Tutorial** - 基本概念の理解
+2. **Installation Guide** - 環境構築とアプリインストール
+3. **Docker Localhost Guide** - ローカル開発環境の構築
+4. **App Development Guides** - カスタムアプリの開発
+
+詳細は [Frappe/ERPNext 開発ガイド](docs/development/frappe-erpnext-development-guide.md) を参照してください。
 
 ### デプロイフロー
 1. apps.jsonを更新
