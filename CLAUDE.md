@@ -144,6 +144,11 @@ bench --site mysite.localhost run-tests --module whitelabel.tests.test_branding
 - [アーキテクチャ比較](architecture_comparison_200_servers.md)
 - [データベースAPI分析](database_api_analysis_report.md)
 
+### トラブルシューティング
+- [データベース接続問題ガイド](docs/troubleshooting/database-connection-issues.md)
+- [包括的トラブルシューティングガイド](docs/troubleshooting/comprehensive-troubleshooting-guide.md)
+- [データベース復旧作業記録](SOW/Daily/2025-07-15-database-recovery-log.md)
+
 ## 🚨 重要な注意事項
 
 ### セキュリティ
@@ -260,14 +265,39 @@ docker compose exec backend bench clear-cache
    - ワーカー数の調整
    - データベースインデックス確認
 
+3. **データベース接続問題** ⭐️ 重要
+   - データベースユーザー認証エラー
+   - 解決方法: [データベース接続問題ガイド](docs/troubleshooting/database-connection-issues.md)
+   - 緊急時の自動復旧スクリプト利用可能
+
+### 🚨 緊急時対応
+**データベース接続エラー発生時**:
+```bash
+# 1. 設定確認
+docker compose exec backend cat sites/[SITE_NAME]/site_config.json
+
+# 2. ユーザー再作成
+docker exec frappe_docker-db-1 mysql -u root -p123 -e "
+CREATE USER IF NOT EXISTS '[DB_USER]'@'%' IDENTIFIED BY '[DB_PASSWORD]';
+GRANT ALL PRIVILEGES ON [DB_NAME].* TO '[DB_USER]'@'%';
+FLUSH PRIVILEGES;
+"
+
+# 3. 動作確認
+docker compose exec backend bench --site [SITE_NAME] list-apps
+```
+
+**詳細な対応手順は** [包括的トラブルシューティングガイド](docs/troubleshooting/comprehensive-troubleshooting-guide.md) **を参照してください。**
+
 ---
 
 ## 📋 開発チェックリスト
 
 ### 新規開発開始時
-- [ ] 開発環境の起動確認
-- [ ] whitelabelアプリのインストール確認
-- [ ] テスト実行環境の確認
+- [x] 開発環境の起動確認
+- [x] whitelabelアプリのインストール確認
+- [x] テスト実行環境の確認
+- [x] 日本語環境の設定確認
 
 ### 機能実装時
 - [ ] DocType/カスタムアプリの作成
@@ -278,8 +308,9 @@ docker compose exec backend bench clear-cache
 ### リリース前
 - [ ] 全テストの実行
 - [ ] Dockerイメージのビルド
-- [ ] apps.jsonの更新
-- [ ] ドキュメントの更新
-- [ ] SOW記録の完了
+- [x] apps.jsonの更新
+- [x] ドキュメントの更新
+- [x] SOW記録の完了
+- [x] トラブルシューティングガイドの作成
 
 **このガイドに従って、高品質なERP Nextプラットフォームを構築してください。**
