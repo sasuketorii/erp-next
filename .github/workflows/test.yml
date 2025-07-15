@@ -1,0 +1,102 @@
+name: Test Suite
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install -r requirements-dev.txt || true
+    
+    - name: Run linting
+      run: |
+        # Flake8 チェック
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+        
+        # Black フォーマットチェック
+        black --check .
+        
+        # isort インポート順チェック
+        isort --check-only .
+    
+    - name: Type checking with mypy
+      run: |
+        mypy --install-types --non-interactive --ignore-missing-imports .
+    
+    - name: Run tests with coverage
+      run: |
+        pytest tests/ -v --cov=src \
+          --cov-report=xml --cov-report=html --cov-report=term-missing
+    
+    - name: Upload coverage reports
+      uses: codecov/codecov-action@v4
+      with:
+        file: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: false
+    
+    - name: Archive test results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-results-${{ matrix.python-version }}
+        path: |
+          htmlcov/
+          .coverage
+          coverage.xml
+    
+    - name: Check for security vulnerabilities
+      run: |
+        pip install safety
+        safety check || true
+
+  integration-test:
+    runs-on: ubuntu-latest
+    needs: test
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Install tmux (for hybrid mode tests)
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y tmux
+    
+    - name: Run integration tests
+      run: |
+        pytest tests/test_end_to_end.py -v --tb=short
+    
+    - name: Run error handling tests
+      run: |
+        pytest tests/test_error_handling.py -v --tb=short

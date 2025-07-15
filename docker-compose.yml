@@ -1,0 +1,204 @@
+# ERP Next Docker Compose設定
+# 本番環境用の基本構成
+
+version: "3.8"
+
+services:
+  backend:
+    image: ${CUSTOM_IMAGE:-frappe/erpnext}:${CUSTOM_TAG:-${ERPNEXT_VERSION:?No version set}}
+    pull_policy: ${PULL_POLICY:-always}
+    deploy:
+      restart_policy:
+        condition: on-failure
+    environment:
+      - SITES=${SITE_NAME:-mysite.localhost}
+      - DB_HOST=${DB_HOST:-mariadb}
+      - DB_PORT=${DB_PORT:-3306}
+      - REDIS_CACHE=${REDIS_CACHE:-redis-cache:6379}
+      - REDIS_QUEUE=${REDIS_QUEUE:-redis-queue:6379}
+      - REDIS_SOCKETIO=${REDIS_SOCKETIO:-redis-socketio:6379}
+      - DEVELOPER_MODE=${DEVELOPER_MODE:-0}
+      - WERKZEUG_DEBUG_PIN=${WERKZEUG_DEBUG_PIN:-off}
+      - LANGUAGE=${DEFAULT_LANGUAGE:-ja}
+      - COUNTRY=${COUNTRY:-Japan}
+      - TIME_ZONE=${TIME_ZONE:-Asia/Tokyo}
+      - CURRENCY=${CURRENCY:-JPY}
+    volumes:
+      - sites:/home/frappe/frappe-bench/sites
+      - logs:/home/frappe/frappe-bench/logs
+    depends_on:
+      - mariadb
+      - redis-cache
+      - redis-queue
+      - redis-socketio
+
+  frontend:
+    image: frappe/frappe-nginx:${FRAPPE_VERSION:-version-15}
+    deploy:
+      restart_policy:
+        condition: on-failure
+    environment:
+      - BACKEND=backend:8000
+      - SOCKETIO=websocket:9000
+      - UPSTREAM_REAL_IP_ADDRESS=127.0.0.1
+      - UPSTREAM_REAL_IP_HEADER=X-Forwarded-For
+      - UPSTREAM_REAL_IP_RECURSIVE=on
+      - PROXY_READ_TIMEOUT=120
+      - CLIENT_MAX_BODY_SIZE=50m
+    volumes:
+      - sites:/usr/share/nginx/html/sites
+      - logs:/var/log/nginx
+    ports:
+      - "${HTTP_PUBLISH_PORT:-8080}:8080"
+    depends_on:
+      - backend
+      - websocket
+
+  websocket:
+    image: ${CUSTOM_IMAGE:-frappe/erpnext}:${CUSTOM_TAG:-${ERPNEXT_VERSION:?No version set}}
+    pull_policy: ${PULL_POLICY:-always}
+    deploy:
+      restart_policy:
+        condition: on-failure
+    command:
+      - node
+      - /home/frappe/frappe-bench/apps/frappe/socketio.js
+    environment:
+      - SITES=${SITE_NAME:-mysite.localhost}
+      - REDIS_SOCKETIO=${REDIS_SOCKETIO:-redis-socketio:6379}
+    volumes:
+      - sites:/home/frappe/frappe-bench/sites
+      - logs:/home/frappe/frappe-bench/logs
+    depends_on:
+      - redis-socketio
+
+  queue-short:
+    image: ${CUSTOM_IMAGE:-frappe/erpnext}:${CUSTOM_TAG:-${ERPNEXT_VERSION:?No version set}}
+    pull_policy: ${PULL_POLICY:-always}
+    deploy:
+      restart_policy:
+        condition: on-failure
+    command:
+      - bench
+      - worker
+      - --queue
+      - short
+    environment:
+      - SITES=${SITE_NAME:-mysite.localhost}
+      - REDIS_QUEUE=${REDIS_QUEUE:-redis-queue:6379}
+    volumes:
+      - sites:/home/frappe/frappe-bench/sites
+      - logs:/home/frappe/frappe-bench/logs
+    depends_on:
+      - redis-queue
+
+  queue-default:
+    image: ${CUSTOM_IMAGE:-frappe/erpnext}:${CUSTOM_TAG:-${ERPNEXT_VERSION:?No version set}}
+    pull_policy: ${PULL_POLICY:-always}
+    deploy:
+      restart_policy:
+        condition: on-failure
+    command:
+      - bench
+      - worker
+      - --queue
+      - default
+    environment:
+      - SITES=${SITE_NAME:-mysite.localhost}
+      - REDIS_QUEUE=${REDIS_QUEUE:-redis-queue:6379}
+    volumes:
+      - sites:/home/frappe/frappe-bench/sites
+      - logs:/home/frappe/frappe-bench/logs
+    depends_on:
+      - redis-queue
+
+  queue-long:
+    image: ${CUSTOM_IMAGE:-frappe/erpnext}:${CUSTOM_TAG:-${ERPNEXT_VERSION:?No version set}}
+    pull_policy: ${PULL_POLICY:-always}
+    deploy:
+      restart_policy:
+        condition: on-failure
+    command:
+      - bench
+      - worker
+      - --queue
+      - long
+    environment:
+      - SITES=${SITE_NAME:-mysite.localhost}
+      - REDIS_QUEUE=${REDIS_QUEUE:-redis-queue:6379}
+    volumes:
+      - sites:/home/frappe/frappe-bench/sites
+      - logs:/home/frappe/frappe-bench/logs
+    depends_on:
+      - redis-queue
+
+  scheduler:
+    image: ${CUSTOM_IMAGE:-frappe/erpnext}:${CUSTOM_TAG:-${ERPNEXT_VERSION:?No version set}}
+    pull_policy: ${PULL_POLICY:-always}
+    deploy:
+      restart_policy:
+        condition: on-failure
+    command:
+      - bench
+      - schedule
+    environment:
+      - SITES=${SITE_NAME:-mysite.localhost}
+      - REDIS_QUEUE=${REDIS_QUEUE:-redis-queue:6379}
+    volumes:
+      - sites:/home/frappe/frappe-bench/sites
+      - logs:/home/frappe/frappe-bench/logs
+    depends_on:
+      - redis-queue
+
+  mariadb:
+    image: mariadb:10.6
+    deploy:
+      restart_policy:
+        condition: on-failure
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --skip-character-set-client-handshake
+      - --skip-innodb-read-only-compressed
+      - --max-connections=1000
+    environment:
+      - MYSQL_ROOT_PASSWORD=changeme
+      - MYSQL_DATABASE=_sys
+      - MYSQL_USER=_sys
+      - MYSQL_PASSWORD=changeme
+    volumes:
+      - mariadb-data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+
+  redis-cache:
+    image: redis:7-alpine
+    deploy:
+      restart_policy:
+        condition: on-failure
+    volumes:
+      - redis-cache-data:/data
+
+  redis-queue:
+    image: redis:7-alpine
+    deploy:
+      restart_policy:
+        condition: on-failure
+    volumes:
+      - redis-queue-data:/data
+
+  redis-socketio:
+    image: redis:7-alpine
+    deploy:
+      restart_policy:
+        condition: on-failure
+    volumes:
+      - redis-socketio-data:/data
+
+volumes:
+  mariadb-data:
+  redis-cache-data:
+  redis-queue-data:
+  redis-socketio-data:
+  sites:
+  logs:

@@ -1,0 +1,34 @@
+# Frappe/ERPNext 日本語対応カスタムDockerイメージ
+FROM frappe/erpnext:${ERPNEXT_VERSION:-v15}
+
+# 日本語環境の設定
+ENV LANG=ja_JP.UTF-8 \
+    LANGUAGE=ja_JP:ja \
+    LC_ALL=ja_JP.UTF-8 \
+    TZ=Asia/Tokyo
+
+# 日本語ロケールのインストール
+USER root
+RUN apt-get update && apt-get install -y \
+    locales \
+    tzdata \
+    && locale-gen ja_JP.UTF-8 \
+    && update-locale LANG=ja_JP.UTF-8 \
+    && ln -sf /usr/share/zoneinfo/Asia/Tokyo /etc/localtime \
+    && echo "Asia/Tokyo" > /etc/timezone \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Frappeユーザーに戻る
+USER frappe
+
+# 日本語デフォルト設定スクリプトをコピー
+COPY --chown=frappe:frappe config/japanese-defaults.py /home/frappe/japanese-defaults.py
+
+# カスタムエントリーポイントスクリプト
+COPY --chown=frappe:frappe scripts/docker-entrypoint-japanese.sh /home/frappe/docker-entrypoint-japanese.sh
+RUN chmod +x /home/frappe/docker-entrypoint-japanese.sh
+
+# サイト作成時のデフォルト言語を設定
+ENV SITE_LANGUAGE=ja \
+    DEFAULT_LANGUAGE=ja
