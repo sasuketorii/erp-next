@@ -153,6 +153,47 @@ docker compose exec backend bench new-site [SITE_NAME] --admin-password admin --
 - インストール中断
 - 依存関係エラー
 
+### 4. Whitelabelモジュール問題 🆕
+
+#### 症状
+- `ModuleNotFoundError: No module named 'whitelabel'`
+- Docker再起動後のHTTP 500エラー
+- サイト完全アクセス不可
+
+#### 診断手順
+```bash
+# 1. モジュール存在確認
+docker compose exec backend python -c "import whitelabel"
+
+# 2. アプリディレクトリ確認
+docker compose exec backend ls -la apps/whitelabel/
+
+# 3. Pythonパス確認
+docker compose exec backend python -c "import sys; print(sys.path)"
+```
+
+#### 解決手順
+```bash
+# 1. whitelabelアプリ再インストール
+docker compose exec backend bench get-app whitelabel https://github.com/bhavesh95863/whitelabel
+
+# 2. サービス再起動
+docker compose restart backend frontend websocket
+
+# 3. 動作確認
+curl -s -o /dev/null -w "%{http_code}" http://localhost:8080
+```
+
+#### 予防策
+**起動スクリプトの使用**:
+```bash
+# 必ず起動スクリプトを使用
+./scripts/startup-check.sh
+
+# 停止時も安全スクリプトを使用
+./scripts/shutdown-safe.sh
+```
+
 #### 診断手順
 ```bash
 # 1. アプリ存在確認

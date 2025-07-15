@@ -148,7 +148,9 @@ bench --site mysite.localhost run-tests --module whitelabel.tests.test_branding
 ### トラブルシューティング
 - [データベース接続問題ガイド](docs/troubleshooting/database-connection-issues.md)
 - [包括的トラブルシューティングガイド](docs/troubleshooting/comprehensive-troubleshooting-guide.md)
+- [Whitelabelモジュール問題対策](docs/troubleshooting/whitelabel-module-issue.md) 🆕
 - [データベース復旧作業記録](SOW/Daily/2025-07-15-database-recovery-log.md)
+- [環境起動問題と対策](SOW/Daily/2025-07-15-environment-startup-issue.md) 🆕
 
 ## 🚨 重要な注意事項
 
@@ -241,6 +243,12 @@ bench --site mysite.localhost run-tests --module whitelabel.tests.test_branding
 
 ### Docker関連
 ```bash
+# 🆕 推奨: 安全な起動方法
+./scripts/startup-check.sh
+
+# 🆕 推奨: 安全な停止方法
+./scripts/shutdown-safe.sh
+
 # コンテナログ確認
 docker compose logs -f backend
 
